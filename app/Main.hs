@@ -19,15 +19,15 @@ import Control.Monad.Trans.Except
 import Control.Monad.IO.Class
 import Control.Monad
 
--- stack runghc Main.hs -- --windowWidth 1920 --windowHeight 500 --deviceName "Midi Through Port-0" --middleCindex 60 --keysNumber 61
+-- stack build hmusica --copy-bins && (cd hmusica && hmusica-exe --deviceName "Midi Through Port-0" --panDivs 0.69 --midiFile songs/silent_night.mid; cd ..)
 
 defaultWindowWidth    = fromMaybe 1920
-defaultWindowHeight   = fromMaybe 600
+defaultWindowHeight   = fromMaybe 680
 defaultMiddleCindex   = fromMaybe 60
 defaultKeysNumber     = fromMaybe 61
 defaultStaffTopLines  = fromMaybe 3
 defaultStaffBotLines  = fromMaybe 5
-defaultStaffZeroTick  = fromMaybe 13
+defaultStaffZeroTick  = fromMaybe (2 * 1000)
 defaultStaffClefSize  = fromMaybe 5
 defaultPanDivs        = PanDivs 0.45
 
@@ -52,13 +52,8 @@ data PanDivs = PanDivs Float deriving Show
 data Musica = Musica { viewPort       :: (Float, Float)
                      , heightDivs     :: PanDivs
                      , staffRenderer  :: Picture
-
-                     , mousePos       :: (Float, Float)
-
-                     , textureAdjust  :: ((Float, Float), (Float, Float), Float)
-                     , textureFile    :: Maybe FilePath
-                     , texturePic     :: Maybe Picture
-                     } deriving Show
+                     , kbRenderer     :: [Bool] ->Picture
+                     }
 
 adjustTexture :: Monad m =>(Float, Float) ->Float ->Picture ->ExceptT String m Picture
 adjustTexture (cx, cy) s = \case
@@ -102,29 +97,29 @@ getPanDivs cfg = case panDivs cfg of
 
 main' :: Config ->ExceptT String IO ()
 main' cfg = do
-  let hPath = "/srv/despierto/home/josejuan/Projects/Haskell/HMUSICA/hmusica/"
-  stream              <-getMidiStream cfg
-  km                  <-setupKeyMap cfg stream
-  sol                 <-textureLoad (-34.0,  81.0) 1.45e-3 $ hPath <> "gfx/sol.png"
-  fa                  <-textureLoad (-12.0, -50.0) 1.74e-3 $ hPath <> "gfx/fa.png"
-  breve               <-textureLoad (  0.0,   0.0) 1.28e-3 $ hPath <> "gfx/breve.png"
-  crotchet            <-textureLoad ( -1.0, 130.0) 1.48e-3 $ hPath <> "gfx/crotchet.png"
-  demisemiquaver      <-textureLoad ( 47.0, 233.0) 1.11e-3 $ hPath <> "gfx/demisemiquaver.png"
-  doublelonga         <-textureLoad ( -1.0, -85.0) 1.37e-3 $ hPath <> "gfx/doublelonga.png"
-  hemidemisemiquaver  <-textureLoad ( 27.0, 127.0) 2.50e-3 $ hPath <> "gfx/hemidemisemiquaver.png"
-  longa               <-textureLoad (  0.0, -89.0) 1.37e-3 $ hPath <> "gfx/longa.png"
-  minim               <-textureLoad (  1.0, 130.0) 1.37e-3 $ hPath <> "gfx/minim.png"
-  quaver              <-textureLoad ( 55.0, 172.0) 1.28e-3 $ hPath <> "gfx/quaver.png"
-  semibreve           <-textureLoad ( -2.0,  -4.0) 1.28e-3 $ hPath <> "gfx/semibreve.png"
-  semiquaver          <-textureLoad ( 42.0, 184.0) 1.37e-3 $ hPath <> "gfx/semiquaver.png"
-  dot                 <-textureLoad (135.0,   1.0) 1.37e-3 $ hPath <> "gfx/dot.png"
-  sharp               <-textureLoad (  0.0,   0.0) 1.28e-3 $ hPath <> "gfx/sharp.png"
-  nkstream            <-liftIO $ noteStreamFromFile (midiFile cfg) "Piano"
-  hdivs               <-getPanDivs cfg
+  stream     <-getMidiStream cfg
+  km         <-setupKeyMap cfg stream
+  sol        <-textureLoad (-34.0,  81.0) 1.45e-3 "gfx/sol.png"
+  fa         <-textureLoad (-12.0, -50.0) 1.74e-3 "gfx/fa.png"
+  dlonga     <-textureLoad ( -1.0, -85.0) 1.37e-3 "gfx/doublelonga.png"
+  longa      <-textureLoad (  0.0, -89.0) 1.37e-3 "gfx/longa.png"
+  breve      <-textureLoad (  0.0,   0.0) 1.28e-3 "gfx/breve.png"
+  semibreve  <-textureLoad ( -2.0,  -4.0) 1.28e-3 "gfx/semibreve.png"
+  minim      <-textureLoad (  1.0, 130.0) 1.37e-3 "gfx/minim.png"
+  crotchet   <-textureLoad ( -1.0, 130.0) 1.48e-3 "gfx/crotchet.png"
+  quaver     <-textureLoad ( 55.0, 172.0) 1.28e-3 "gfx/quaver.png"
+  semiquaver <-textureLoad ( 42.0, 184.0) 1.37e-3 "gfx/semiquaver.png"
+  dsquaver   <-textureLoad ( 47.0, 233.0) 1.11e-3 "gfx/demisemiquaver.png"
+  hdsquaver  <-textureLoad ( 27.0, 127.0) 2.50e-3 "gfx/hemidemisemiquaver.png"
+  dot        <-textureLoad (135.0,   1.0) 1.37e-3 "gfx/dot.png"
+  sharp      <-textureLoad (  0.0,   0.0) 1.28e-3 "gfx/sharp.png"
+  kbbg       <-textureLoad (  0.0,   0.0) (1/250) "gfx/keyboard.png"
+  nkstream   <-liftIO $ noteStreamFromFile (midiFile cfg) "Piano"
+  hdivs      <-getPanDivs cfg
   let vp@(vpw, vph) = (defaultWindowWidth (windowWidth cfg), defaultWindowHeight (windowHeight cfg))
       staffrenderer = renderStaff sol
                                   fa
-                                  doublelonga
+                                  dlonga
                                   longa
                                   breve
                                   semibreve
@@ -132,8 +127,8 @@ main' cfg = do
                                   crotchet
                                   quaver
                                   semiquaver
-                                  demisemiquaver
-                                  hemidemisemiquaver
+                                  dsquaver
+                                  hdsquaver
                                   dot
                                   sharp
                                   (defaultStaffTopLines (staffTopLines cfg))
@@ -141,9 +136,9 @@ main' cfg = do
                                   (defaultStaffZeroTick (staffZeroTicks cfg))
                                   (defaultStaffClefSize (staffClefSize cfg))
                                   (defaultMiddleCindex (middleCindex cfg))
-                                  (notes nkstream) (tempo nkstream) (480)
-      musica        = Musica (fromIntegral vpw, fromIntegral vph) hdivs staffrenderer
-                             (0,0) ((0, 0), (1, 1), 1) (Just $ hPath <> "songs/dot.png") Nothing
+                                  (tempo nkstream) (480) (notes nkstream)
+      kbrenderer    = renderKeyboard kbbg
+      musica        = Musica (fromIntegral vpw, fromIntegral vph) hdivs staffrenderer kbrenderer
       window        = InWindow "HMusica" vp (0, 0)
   liftIO $ playIO window white 30 musica (renderMusica cfg km) interactiveMusica (const return)
 
@@ -162,38 +157,12 @@ renderMusica' cfg mus st =
   let PanDivs hDiv1  = heightDivs mus
       (vw, vh)       = viewPort mus
       (xA)           = (-vw/2.2)
-      (yA, yB, yC)   = (a, a * (1 - hDiv1) + b * hDiv1, b)
-                       where m = 0.9
-                             s = m * vh
-                             a = 0.5 * s
-                             b = -0.5 * s
-      s1             = yA - yB
-      s2             = yB - yC
+      (yA, yB, yC)   = (a, a * (1 - hDiv1) + b * hDiv1, b) where { m = 0.9; s = m * vh; a = 0.5 * s; b = -0.5 * s }
+      (s1, s2)       = (yA - yB, yB - yC)
       staff          = translate xA yA $ scale s1 s1 $ staffRenderer mus
-      keyboard       = translate xA yB $ scale s2 s2 $ renderKeyboard st
-      txt            = let ((px, py), _, _) = textureAdjust mus
-                           ss = 1 / fromIntegral (12 + defaultStaffTopLines (staffTopLines cfg) + defaultStaffBotLines (staffBotLines cfg))
-                       in  translate px py $ Pictures [scale s1 s1 $ scale ss ss $ fromMaybe Blank (texturePic mus), color red $ circle 2]
-  in  Pictures [staff, keyboard, txt]
+      keyboard       = translate  0 yB $ scale s2 s2 $ kbRenderer mus st
+  in  Pictures [staff, keyboard]
 
 interactiveMusica :: Event ->Musica ->IO Musica
-interactiveMusica (EventMotion mousePos') mus = return $ mus { mousePos = mousePos' }
-interactiveMusica (EventKey (SpecialKey KeyF2) Up _ m) mus = let (_, c, s) = textureAdjust mus in interactiveReloadTexture $ mus { textureAdjust = (m, c, s) }
-interactiveMusica (EventKey (SpecialKey KeyF3) Up _ m) mus = let (p, _, s) = textureAdjust mus in interactiveReloadTexture $ mus { textureAdjust = (p, m, s) }
-interactiveMusica (EventKey (SpecialKey KeyF4) Up _ m) mus = let (p, c, _) = textureAdjust mus in interactiveReloadTexture $ mus { textureAdjust = (p, c, fst m) }
+-- interactiveMusica (EventKey (SpecialKey KeyF2) Up _ m) mus =
 interactiveMusica  _                                   mus = return mus
-
-interactiveReloadTexture :: Musica ->IO Musica
-interactiveReloadTexture m = do
-    let ((px, py), (cx, cy), dx) = textureAdjust m
-        mf        = textureFile   m
-    case mf of
-      Nothing ->return m
-      Just f ->do
-              let c = (cx - px, cy - py)
-                  s = (1 / (1 + dx - px))^2
-              putStrLn $ "Adjust texture: " <> show c <> " " <> show s
-              pic' <-runExceptT $ textureLoad c s f
-              case pic' of
-                Left e ->liftIO (putStrLn e) >> return m
-                Right p ->return $ m { texturePic = Just $ scale 7 7 $ p }

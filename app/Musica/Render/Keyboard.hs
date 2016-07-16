@@ -16,8 +16,8 @@ bwh =     blackHeight / whiteHeight
 keyRatio = whiteHeight / whiteWidth
 
 -- Output Picture will be 1 fixed height and width proportional to keys size.
-renderKeyboard :: [Bool] ->Picture
-renderKeyboard xs = scale (0.5 / keyRatio) (-1) $ translate 1 0 $ Pictures (blancas ++ negras)
+renderKeyboard :: Picture ->[Bool] ->Picture
+renderKeyboard bg xs = pictures [bg, translate (-0.5 * nteclas / keyRatio) 0 $ scale (0.5 / keyRatio) (-1) $ translate 1 0 $ pictures (blancas ++ negras)]
   where blancas = renderKeyStream odd  white   2   1 xs
         negras  = renderKeyStream even black bww bwh xs
         nteclas = genericLength blancas
