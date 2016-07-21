@@ -136,7 +136,7 @@ main' cfg = do
                                   (defaultStaffZeroTick (staffZeroTicks cfg))
                                   (defaultStaffClefSize (staffClefSize cfg))
                                   (defaultMiddleCindex (middleCindex cfg))
-                                  (tempo nkstream) (480) (notes nkstream)
+                                  (tempo nkstream) (-100) (notes nkstream)
       kbrenderer    = renderKeyboard kbbg
       musica        = Musica (fromIntegral vpw, fromIntegral vph) hdivs staffrenderer kbrenderer
       window        = InWindow "HMusica" vp (0, 0)

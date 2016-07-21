@@ -1,6 +1,6 @@
 # hmusica
 
-Va leyendo los eventos de una entrada MIDI (ej. un teclado electrónico) y muestra las pulsaciones de tecla.
+Va leyendo los eventos de una entrada MIDI (ej. un teclado electrónico) y muestra las pulsaciones de tecla, también lee una entrada MIDI (en principio un fichero) y escribe las notas (sólo las notas básicas, no se deducen grupos complejos).
 
 ![Captura de ejemplo](/screenshot.png?raw=true "Captura de ejemplo")
 
